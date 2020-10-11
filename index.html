@@ -1,0 +1,94 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+      <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- 引入组件库 -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+
+
+      <el-row style="margin-top: 15px ;">
+        <el-input v-model="username" placeholder="请输入用户名"></el-input>
+      </el-row>
+      <el-row style="margin-top: 15px ;">
+        <el-input v-model="password" show-password placeholder="请输入密码"></el-input>
+      </el-row>
+  
+      <el-row style="margin-top: 15px ;">
+        <el-button type="primary" plain v-on:click="login" size="small">Login</el-button>
+        <el-button type="primary" plain v-on:click="logout" size="small">Logout</el-button>
+        <el-button type="primary" plain v-on:click="getUser" size="small">GetUser</el-button>
+        <el-button plain @click="logs=[]" size="small">Clear Log</el-button>
+      </el-row>
+      
+      <!-- 日志 -->
+      <ul>
+        <li v-for="(log,idx) in logs" :key="idx">
+          {{ log }}
+        </li>
+      </ul>
+    </div>
+    <script>
+      // 请求拦截，给请求头信息设置 Authorization
+      axios.interceptors.request.use(
+        config => {
+          const token = window.localStorage.getItem("token");
+          if (token) {
+            // 判断是否存在token，如果存在的话，则每个http header都加上token
+            // Bearer是JWT的认证头部信息
+            config.headers.common["Authorization"] = "Bearer " + token;
+          }
+          return config;
+        },
+        err => {
+          return Promise.reject(err);
+        }
+      );
+
+      // 响应拦截
+      axios.interceptors.response.use(
+        response => {
+          console.log('------response---', response)
+          app.logs.push(JSON.stringify(response.data));
+          return response;
+        },
+        err => {
+          console.log('===err==', err)
+          app.logs.push(err.message);
+          return Promise.reject(err);
+        }
+      );
+      var app = new Vue({
+        el: "#app",
+        data: {
+          username: "test",
+          password: "test",
+          logs: []
+        },
+        methods: {
+          async login() {
+            const res = await axios.post("/login-token", {
+              username: this.username,
+              password: this.password
+            });
+            // 将 token 保存到 localStorage
+            localStorage.setItem("token", res.data.token);
+          },
+          async logout() {
+            // 退出登录时将 token 从 localStorage 中删除
+            localStorage.removeItem("token");
+          },
+          async getUser() {
+            await axios.get("/getUser-token");
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+
